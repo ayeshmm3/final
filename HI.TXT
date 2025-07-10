@@ -304,3 +304,35 @@ if cves_180_day:
 else:
     print("\n✅ No CVEs < 4.0 detected.")
 
+
+
+
+
+score = cvss_v31.get("baseScore")
+vuln_entry = {
+    "cve_id": cve_id,
+    "description": summary,
+    "cvss_info": cvss_info,
+    "published_date": published_date,
+    "source": source_url
+}
+result["vulnerabilities"].append(vuln_entry)
+
+# Categorize
+try:
+    s = float(score)
+    key = "high_cvss" if s >= 4.0 else "low_cvss"
+    result.setdefault(key, []).append(vuln_entry)
+except:
+    pass  # Skip if score is N/A or invalid
+
+for label, group in [("CVSS >= 4.0", "high_cvss"), ("CVSS < 4.0", "low_cvss")]:
+    print(f"\n>> {label}:")
+    for v in result.get(group, []):
+        print(f"  - {v['cve_id']} | {v['cvss_info']['v3.1']['score']} | {v['description'][:80]}...")
+
+print(f"\n>> Missing CVSS score:")
+for v in result["vulnerabilities"]:
+    if v["cvss_info"]["v3.1"]["score"] in ("N/A", None, ""):
+        print(f"  - {v['cve_id']} | N/A | {v['description'][:80]}...")
+
