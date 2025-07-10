@@ -1,0 +1,20 @@
+# === CVSS Summary Grouping ===
+high_cves = []
+low_cves = []
+
+for v in result.get("vulnerabilities", []):
+    try:
+        score = float(v["cvss_info"]["v3.1"]["score"])
+        entry = f"{v['cve_id']} | Score: {score} | {v['description'][:80]}..."
+        if score >= 4.0:
+            high_cves.append(entry)
+        else:
+            low_cves.append(entry)
+    except:
+        continue  # Skip if score is invalid or N/A
+
+print("\n--- CVEs with CVSS >= 4.0 ---")
+print("\n".join(high_cves) if high_cves else "None found.")
+
+print("\n--- CVEs with CVSS < 4.0 ---")
+print("\n".join(low_cves) if low_cves else "None found.")
