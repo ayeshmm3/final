@@ -1,0 +1,79 @@
+import requests
+import getpass
+import json
+
+def get_ip_address():
+    return input("Enter IP address: ")
+
+def get_password():
+    return getpass.getpass("Enter password: ")
+
+def send_request(ip, password):
+    url = f"http://{ip}/TMI/v1/auth/login"
+    
+    payload = {"username": "admin", "password": password}
+    headers = {
+        "Content-Type": "text/plain;charset=UTF-8"
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    return response
+
+def test27(response, password):
+    response_text = response.text
+    print(response_text)  
+
+    if len(password) > 30:
+        print("[*] Password length is greater than 30")
+    else:
+        print("[*] Password length is less than or equal to 30")
+
+
+# def main():
+#     ip = get_ip_address()
+#     password = get_password()
+#     response = send_request(ip, password)
+
+#     print("Status Code:", response.status_code)
+#     print("Response:")
+    
+#     test27(response, password)
+def main():
+    ip = get_ip_address()
+
+    # if not is_valid_ip(ip):
+    #     print("Invalid IP address format.")
+    #     return
+
+    password = get_password()
+    response = send_request(ip, password)
+
+    if response:
+        print("Status Code:", response.status_code)
+
+        try:
+            json_data = response.json()
+            print("\nFull JSON Response:")
+            print(json.dumps(json_data, indent=2))  # Pretty-print the JSON
+
+            # Print cookies
+            print("\nCookies:", response.cookies.get_dict())
+
+            # Extract and print token
+            token = json_data.get("auth", {}).get("token")
+            print("\nToken:", token)
+
+         
+            # Print any extra fields beyond "auth"
+            for key, value in json_data.items():
+                if key != "auth":
+                    print(f"[!] Extra field: {key} -> {value}")
+
+            # Your existing password length check
+            test27(response, password)
+
+        except ValueError:
+            print("Response is not in JSON format.")
+
+if __name__ == "__main__":
+    main()
