@@ -1,0 +1,2 @@
+print("=== [TESTING] Device Security TRD 2.8.1.4 - Listening Ports on LAN (GID-MTRREQ-521707) [MANDATORY] ===")
+print("Note: Ensure only allowed ports (80, 443 for Web UI, 53 for DNS) are open. Services must not listen on 0.0.0.0 unless explicitly required.")
