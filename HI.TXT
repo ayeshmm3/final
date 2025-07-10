@@ -239,3 +239,68 @@ Closest available CPE (fuzzy matched): cpe:2.3:o:linux:linux_kernel:5.4.132:*:*:
 You may inspect this CPE manually in the NVD database if needed.
 
 Scan results saved to final.txt
+
+
+
+
+cves_90_day = []
+cves_180_day = []
+
+
+if result.get("vulnerable"):
+    for vuln in result["vulnerabilities"]:
+        cvss_score = vuln["cvss_info"]["v3.1"].get("score")
+        if cvss_score is None:
+            continue
+
+        try:
+            score_val = float(cvss_score)
+        except ValueError:
+            continue
+
+        entry = {
+            "cpe": result["cpe"],
+            "product": result["product"],
+            "version": result["version"],
+            "cve_id": vuln["cve_id"],
+            "score": score_val,
+            "severity": vuln["cvss_info"]["v3.1"].get("severity", "N/A"),
+            "published": vuln.get("published_date", "N/A"),
+            "description": vuln.get("description", "N/A"),
+            "url": vuln.get("source", "N/A")
+        }
+
+        if score_val >= 4.0:
+            cves_90_day.append(entry)
+        else:
+            cves_180_day.append(entry)
+
+
+print("\n" + "="*150)
+print("🔒 Summary: CVEs Requiring Remediation by Risk Level")
+print("="*150)
+
+if cves_90_day:
+    print("\n⏰ [MANDATORY] CVEs to Fix Within 90 Days (CVSS ≥ 4.0)")
+    for item in cves_90_day:
+        print(f"\n  • {item['cve_id']} | CVSS: {item['score']} | {item['severity']}")
+        print(f"    Service: {item['product']} {item['version']}")
+        print(f"    CPE: {item['cpe']}")
+        print(f"    Description: {item['description']}")
+        print(f"    Published: {item['published']}")
+        print(f"    Reference: {item['url']}")
+else:
+    print("\n✅ No CVEs ≥ 4.0 detected.")
+
+if cves_180_day:
+    print("\n🕒 [ADVISORY] CVEs to Fix Within 180 Days (CVSS < 4.0)")
+    for item in cves_180_day:
+        print(f"\n  • {item['cve_id']} | CVSS: {item['score']} | {item['severity']}")
+        print(f"    Service: {item['product']} {item['version']}")
+        print(f"    CPE: {item['cpe']}")
+        print(f"    Description: {item['description']}")
+        print(f"    Published: {item['published']}")
+        print(f"    Reference: {item['url']}")
+else:
+    print("\n✅ No CVEs < 4.0 detected.")
+
