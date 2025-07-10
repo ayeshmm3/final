@@ -1,0 +1,48 @@
+result = self.query_nvd_api(converted_cpe, self.api_key)
+
+if result.get("error") or not result.get("vulnerable"):
+    print(f"Trying fuzzy match correction for {converted_cpe}..")
+    closest_match, score, exact_version_match = self.fuzzy_match_cpe(converted_cpe, cpe_dict)
+
+    if closest_match:
+        if exact_version_match:
+            print(f"\n✅ Closest CPE: {closest_match} (score: {score})")
+            print("Version matches exactly. Performing NVD lookup...\n")
+            result = self.query_nvd_api(closest_match, self.api_key)
+            print("="*150 + "\n")
+            print(json.dumps(result, indent=2))
+            print("="*150 + "\n")
+        else:
+            print(f"\n⚠️ Exact version not found. No NVD query performed.")
+            print(f"Closest available CPE for reference: {closest_match} (score: {score})")
+            print("You may manually inspect this suggestion in the NVD database if needed.\n")
+    else:
+        print("No suitable fuzzy match found.")
+
+
+
+def fuzzy_match_cpe(self, cpe_to_match: str, cpe_list: list, min_score=65):
+    v, p, ver = self.split_cpe(cpe_to_match)
+    best_score = 0
+    best_cpe = None
+    exact_version_match = False
+
+    for candidate in cpe_list:
+        cv, cp, cver = self.split_cpe(candidate)
+
+        vendor_score = fuzz.ratio(v, cv)
+        product_score = fuzz.ratio(p, cp)
+        version_score = fuzz.ratio(ver, cver)
+
+        combined_score = 0.3 * vendor_score + 0.5 * product_score + 0.2 * version_score
+
+        # Track best match
+        if combined_score > best_score:
+            best_score = combined_score
+            best_cpe = candidate
+            exact_version_match = (ver == cver)  # Only update if this is best candidate
+
+    if best_score >= min_score:
+        return best_cpe, best_score, exact_version_match
+    else:
+        return None, 0, False
