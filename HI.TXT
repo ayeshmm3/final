@@ -1,2 +1,62 @@
 print("=== [TESTING] Device Security TRD 2.8.1.4 - Listening Ports on LAN (GID-MTRREQ-521707) [MANDATORY] ===")
 print("Note: Ensure only allowed ports (80, 443 for Web UI, 53 for DNS) are open. Services must not listen on 0.0.0.0 unless explicitly required.")
+
+def print_results(self):
+    if self.normal_ports or self.abnormal_ports:
+        print("\n=== Normal Ports ===")
+        print("\n".join(self.normal_ports) if self.normal_ports else "No normal ports found")
+        print("\n=== Abnormal Ports ===")
+        print("\n".join(self.abnormal_ports) if self.abnormal_ports else "No abnormal ports found")
+    else:
+        print("No open ports found")
+
+    print("\nNmap Scan was successful")
+    print("\n=== Extracted CPEs and Vulnerabilities ===")
+    
+    cpe_dict = self.parse_cpe_dictionary(r"C:\Users\Offband\Documents\official-cpe-dictionary_v2.3.xml")     
+
+    if not self.cpes:
+        print("\n⚠️  No CPEs with specific version information were extracted from the Nmap scan.")
+        print("This means the scan did not detect services with identifiable product + version info mapped to official CPEs.")
+        print("Without a CPE that includes an exact version, no CVE-based vulnerability analysis can be performed.")
+        print("As a result, we cannot confirm or deny the presence of known vulnerabilities for these services.\n")
+        return
+
+    for cpe_23 in self.cpes:
+        converted_cpe = self.convert_cpe_2_2_to_2_3(cpe_23)
+        print(f"\nChecking CPE: {converted_cpe}")
+
+        if not self.is_cpe_qualified(converted_cpe):
+            print("\n" + "="*150)
+            print(f"⚠️ Service '{converted_cpe}' does not have a specific version. Skipping NVD lookup.")
+            print("You may manually verify the version and search for vulnerabilities if needed.")
+            print("="*150 + "\n")
+            continue
+
+        # Try direct NVD lookup
+        result = self.query_nvd_api(converted_cpe, self.api_key)
+
+        if result.get("error") or not result.get("vulnerable"):
+            print(f"\nℹ️ No vulnerabilities found or an error occurred while querying: {converted_cpe}")
+            print(f"Trying fuzzy match correction...")
+
+            closest_match, score, exact_version_match = self.fuzzy_match_cpe(converted_cpe, cpe_dict)
+
+            if closest_match:
+                if exact_version_match:
+                    print(f"\n✅ Closest CPE with exact version: {closest_match} (score: {score})")
+                    print("Performing NVD lookup...\n")
+                    result = self.query_nvd_api(closest_match, self.api_key)
+                    print("="*150 + "\n")
+                    print(json.dumps(result, indent=2))
+                    print("="*150 + "\n")
+                else:
+                    print(f"\n⚠️ Version does not match exactly. Skipping NVD lookup.")
+                    print(f"Closest available CPE (fuzzy matched): {closest_match} (score: {score})")
+                    print("You may inspect this CPE manually in the NVD database if needed.\n")
+            else:
+                print("❌ No good fuzzy match found.")
+        else:
+            print("="*150 + "\n")
+            print(json.dumps(result, indent=2))
+            print("="*150 + "\n")
