@@ -1,0 +1,26 @@
+import paramiko
+
+# === CONFIG ===
+droplet_ip = "your.droplet.ip"      # Replace with your Droplet's IP
+ssh_key_path = "~/.ssh/id_rsa"      # Your SSH private key
+target_ip = "198.51.100.25"         # Target IP for Nmap
+
+# === CONNECT TO DROPLET ===
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+try:
+    print(f"Connecting to {droplet_ip}...")
+    ssh.connect(droplet_ip, username="root", key_filename=ssh_key_path)
+
+    # === RUN NMAP ===
+    cmd = f"nmap -sT -sV -A {target_ip}"
+    print(f"Running: {cmd}")
+    stdin, stdout, stderr = ssh.exec_command(cmd)
+    output = stdout.read().decode()
+    print(output)
+
+except Exception as e:
+    print(f"Connection or scan failed: {e}")
+finally:
+    ssh.close()
